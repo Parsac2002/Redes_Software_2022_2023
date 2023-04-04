@@ -10,22 +10,26 @@ from mininet.node import OVSSwitch
 from functools import partial
 
 class SingleSwitchTopo (Topo):
-    def build(self, N=2):
+    def build(self, N=2, *args):
         switch = self.addSwitch('s1', protocols = 'OpenFlow13')
-        h1 = self.addHost('h1', mac = '00:00:00:00:00:01',ip = '10.0.0.2', cls = MyHost, (ip_dest,mac_dest))
-        h2 = self.addHost('h2', mac = '00:00:00:00:00:02', ip = '10.0.1.2')
+        h1 = self.addHost('h1', mac = '00:00:00:00:00:01',ip = '10.0.0.2', cls = MyHost, tupla_ip_mac_dest = args[0])
+        h2 = self.addHost('h2', mac = '00:00:00:00:00:02', ip = '10.0.1.2', cls = MyHost, tupla_ip_mac_dest = args[1])
         self.addLink(h1, switch)
         self.addLink(h2, switch)
-
+# tupla_ip_mac_dest
+# ip = tupla_ip_mac[0]
 class MyHost(Host):
-    def config(self, (ip_dest,mac_dest), **params):
+    def config(self, tupla_ip_mac_dest, **params):
         host = super(MyHost, self).config(**params)
-        host.setARP(ip = ip_dest, mac = mac_dest)
+        host.setARP(ip = tupla_ip_mac_dest[0], mac = tupla_ip_mac_dest[1])
         return host
 
 
 def simpleTestCLI():
-    topo = SingleSwitchTopo(2)
+    tupla_ip_mac_dest_1 = ("10.0.0.1", "70:88:99:00:00:01")
+    tupla_ip_mac_dest_2 = ("10.0.1.1", "70:88:99:00:00:02")
+    ##args = [tupla_ip_mac_dest_1, tupla_ip_mac_dest_2]
+    topo = SingleSwitchTopo(2, tupla_ip_mac_dest_1, tupla_ip_mac_dest_2)
     net = Mininet(topo, controller = partial(RemoteController, ip="127.0.0.1"))
     #partial en este caso devolvera el constructor de la clase RemoteController con los parametros que le especificamos
     #Entonces controller sera una llamada al constructor RemoteController que devolvera un objeto de la clase RemoteController
