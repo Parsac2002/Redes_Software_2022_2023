@@ -71,20 +71,20 @@ class SimpleSwitch13(app_manager.RyuApp):
 
 
         #Paquetes desde h1 a h2:
-        match_1 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.0.0', '255.255.255.0'))
-        actions_1 = self.forwardActions(parser = parser, ofproto = ofproto, port = 1, src = "70:88:99:00:00:02", dst = "00:00:00:00:00:02" )
+        match_1 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.1.0', '255.255.255.0'))
+        actions_1 = self.forwardActions(parser = parser, ofproto = ofproto, port = ofproto.OFPP_FLOOD, src = "70:88:99:00:00:02", dst = "00:00:00:00:00:02" )
         self.add_flow(datapath= datapath, priority = 1000, match = match_1, actions = actions_1)
         
         #Paquetes desde h2 a h1:
-        match_2 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.1.0', '255.255.255.0'))
-        actions_2 = self.forwardActions(parser = parser, ofproto = ofproto, port = 0, src = "70:88:99:00:00:01", dst = "00:00:00:00:00:01" )
+        match_2 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.0.0', '255.255.255.0'))
+        actions_2 = self.forwardActions(parser = parser, ofproto = ofproto, port = ofproto.OFPP_FLOOD , src = "70:88:99:00:00:01", dst = "00:00:00:00:00:01" )
         self.add_flow(datapath= datapath, priority = 1000, match = match_2, actions = actions_2)
         
         #Resto de paquetes:
         match_0 = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                         ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, qiotmatch_0, actions)
+        self.add_flow(datapath, 0, match_0, actions)
 
 
         
@@ -94,7 +94,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         #parser.OFPActionDecNwTtl(len = 1),
         parser.OFPActionSetField(eth_src=src),
         parser.OFPActionSetField(eth_dst=dst),
-        parser.OFPActionDecNwTtl(len = 1),
+        parser.OFPActionDecNwTtl(),
         parser.OFPActionOutput(port),
         ]
     def dropActions(self, parser, ofproto):
