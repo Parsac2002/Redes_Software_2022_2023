@@ -39,7 +39,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-
+        #in_port = msg.match['in_port']
         # install table-miss flow entry
         #
         # We specify NO BUFFER to max_len of the output action due to
@@ -50,6 +50,9 @@ class SimpleSwitch13(app_manager.RyuApp):
     
         # pkt = packet.Packet(msg.data)
         # eth = pkt.get_protocols(ethernet.ethernet)[0]#devuelve una lista de protocolos de nivel de enlace (guarda 1a opcion)
+        
+        
+        
         # pkt_ipv6 = pkt.get_protocol(ipv6.ipv6)#devuelve el primer miembro de la lista de protocolos que corresponden a ipv6.
         # if eth.ethertype == ether_types.ETH_TYPE_LLDP:
         #     #ethertype es un atributo de la clase ethernet que siempre es el mismo (0x0800)
@@ -58,6 +61,16 @@ class SimpleSwitch13(app_manager.RyuApp):
         # if pkt_ipv6.ipv6 == ether_types.ETH_TYPE_IPV6 :
         #     # ignore ipv6 packet (0x86DD)
         #     self.dropActions(parser = parser, ofproto = ofproto)
+
+        # #Impresion del paquete entrante al switch:
+        # dst = eth.dst
+        # src = eth.src
+
+        # dpid = format(datapath.id, "d").zfill(16)
+        # #self.mac_to_port.setdefault(dpid, {})
+
+        # self.logger.info("packet in %s %s %s", dpid, src, dst)
+
 
         #fLUJOS PARA LLDP E IPV6:
         # LLDP -> 
@@ -72,12 +85,12 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         #Paquetes desde h1 a h2:
         match_1 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.1.0', '255.255.255.0'))
-        actions_1 = self.forwardActions(parser = parser, ofproto = ofproto, port = ofproto.OFPP_FLOOD, src = "70:88:99:00:00:02", dst = "00:00:00:00:00:02" )
+        actions_1 = self.forwardActions(parser = parser, ofproto = ofproto, port = 2, src = "70:88:99:00:00:02", dst = "00:00:00:00:00:02" )
         self.add_flow(datapath= datapath, priority = 1000, match = match_1, actions = actions_1)
         
         #Paquetes desde h2 a h1:
         match_2 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.0.0', '255.255.255.0'))
-        actions_2 = self.forwardActions(parser = parser, ofproto = ofproto, port = ofproto.OFPP_FLOOD , src = "70:88:99:00:00:01", dst = "00:00:00:00:00:01" )
+        actions_2 = self.forwardActions(parser = parser, ofproto = ofproto, port = 1 , src = "70:88:99:00:00:01", dst = "00:00:00:00:00:01" )
         self.add_flow(datapath= datapath, priority = 1000, match = match_2, actions = actions_2)
         
         #Resto de paquetes:

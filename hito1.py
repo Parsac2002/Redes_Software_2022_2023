@@ -16,8 +16,8 @@ class SingleSwitchTopo (Topo):
         switch = self.addSwitch('s1', protocols = 'OpenFlow13')
         h1 = self.addHost('h1', mac = '00:00:00:00:00:01',ip = '10.0.0.2/24',defaultRoute = "via 10.0.0.1", cls = MyHost, arp = tupla_ip_mac_dest_1 )
         h2 = self.addHost('h2', mac = '00:00:00:00:00:02', ip = '10.0.1.2/24', defaultRoute = "via 10.0.1.1",cls = MyHost, arp = tupla_ip_mac_dest_2  )
-        self.addLink(h1, switch)
-        self.addLink(h2, switch)
+        self.addLink(h1, switch, port1 = 1) #Port1 es el puerto del switch en cada link que conecta con el host adecuado.
+        self.addLink(h2, switch, port1= 2)
 # tupla_ip_mac_dest
 # ip = tupla_ip_mac[0]
 class MyHost(Host):
