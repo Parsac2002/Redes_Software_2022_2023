@@ -33,9 +33,10 @@ class SimpleSwitch13(app_manager.RyuApp):
         super(SimpleSwitch13, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
 
-    @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)#respon
+    @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)#responde a las peticiones de configuracion que manda el switch.
     def switch_features_handler(self, ev):
-        datapath = ev.msg.datapath
+        msg = ev.msg
+        datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
@@ -46,17 +47,66 @@ class SimpleSwitch13(app_manager.RyuApp):
         # 128, OVS will send Packet-In with invalid buffer_id and
         # truncated packet data. In that case, we cannot output packets
         # correctly.  The bug has been fixed in OVS v2.1.0.
-        match = parser.OFPMatch()
+    
+        # pkt = packet.Packet(msg.data)
+        # eth = pkt.get_protocols(ethernet.ethernet)[0]#devuelve una lista de protocolos de nivel de enlace (guarda 1a opcion)
+        # pkt_ipv6 = pkt.get_protocol(ipv6.ipv6)#devuelve el primer miembro de la lista de protocolos que corresponden a ipv6.
+        # if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+        #     #ethertype es un atributo de la clase ethernet que siempre es el mismo (0x0800)
+        #     # ignore lldp packet
+        #     self.dropActions(parser = parser, ofproto = ofproto)
+        # if pkt_ipv6.ipv6 == ether_types.ETH_TYPE_IPV6 :
+        #     # ignore ipv6 packet (0x86DD)
+        #     self.dropActions(parser = parser, ofproto = ofproto)
+
+        #fLUJOS PARA LLDP E IPV6:
+        # LLDP -> 
+        match_LLDP = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_LLDP)
+        actions_LLDP = self.dropActions(parser = parser, ofproto = ofproto)
+        self.add_flow(datapath= datapath, priority = 10000, match = match_LLDP, actions = actions_LLDP)
+        # IPV6 -> 
+        match_IPV6 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IPV6)
+        actions_IPV6 = self.dropActions(parser = parser, ofproto = ofproto)
+        self.add_flow(datapath= datapath, priority = 10000, match = match_IPV6, actions = actions_IPV6)
+
+
+        #Paquetes desde h1 a h2:
+        match_1 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.0.0', '255.255.255.0'))
+        actions_1 = self.forwardActions(parser = parser, ofproto = ofproto, port = 1, src = "70:88:99:00:00:02", dst = "00:00:00:00:00:02" )
+        self.add_flow(datapath= datapath, priority = 1000, match = match_1, actions = actions_1)
+        
+        #Paquetes desde h2 a h1:
+        match_2 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.1.0', '255.255.255.0'))
+        actions_2 = self.forwardActions(parser = parser, ofproto = ofproto, port = 0, src = "70:88:99:00:00:01", dst = "00:00:00:00:00:01" )
+        self.add_flow(datapath= datapath, priority = 1000, match = match_2, actions = actions_2)
+        
+        #Resto de paquetes:
+        match_0 = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
+                                        ofproto.OFPCML_NO_BUFFER)]
+        self.add_flow(datapath, 0, qiotmatch_0, actions)
+
+
+        
+
+    def forwardActions(self, parser, ofproto, port, src, dst):
+        return [
+        #parser.OFPActionDecNwTtl(len = 1),
+        parser.OFPActionSetField(eth_src=src),
+        parser.OFPActionSetField(eth_dst=dst),
+        parser.OFPActionDecNwTtl(len = 1),
+        parser.OFPActionOutput(port),
+        ]
+    def dropActions(self, parser, ofproto):
+        return [ ]
+    
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
+                                            actions)]
         if buffer_id:
             mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
                                     priority=priority, match=match,
@@ -72,7 +122,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         # the "miss_send_length" of your switch
         if ev.msg.msg_len < ev.msg.total_len:
             self.logger.debug("packet truncated: only %s of %s bytes",
-                              ev.msg.msg_len, ev.msg.total_len)
+                            ev.msg.msg_len, ev.msg.total_len)
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto
@@ -81,7 +131,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]#devuelve una lista de protocolos de nivel de enlace (guarda 1a opcion)
-        pkt_ipv6 = pkt.get_protocol(ipv6.ipv6)#devuelve el primer miembro de la lista de protocolos que corresponden a ipv6.
+        #pkt_ipv6 = pkt.get_protocol(ipv6.ipv6)#devuelve el primer miembro de la lista de protocolos que corresponden a ipv6.
 
         # if eth.ethertype == ether_types.ETH_TYPE_LLDP:
         #     #ethertype es un atributo de la clase ethernet que siempre es el mismo (0x0800)
