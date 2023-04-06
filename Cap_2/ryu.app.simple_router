@@ -52,18 +52,18 @@ class SimpleRouter(app_manager.RyuApp):
         actions_IPV6 = self.dropActions(parser = parser, ofproto = ofproto)
         self.add_flow(datapath= datapath, priority = 10000, match = match_IPV6, actions = actions_IPV6)
         
-        #Paquetes ICMP:
-        pkt = packet.Packet(msg.data)
-        eth = pkt.get_protocol(ethernet.ethernet)
-        if eth.ethertype == ether_types.ETH_TYPE_IP:
-            ip = pkt.get_protocol(ipv4.ipv4)
-            protocol = ip.proto
-            if protocol == in_proto.IPPROTO_ICMP:
-                match_ICMP = parser.OFPMatch(eth_type= ether_types.ETH_TYPE_IP)
-                actions_ICMP = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                                ofproto.OFPCML_NO_BUFFER)]
-                self.add_flow(datapath, 5000, match_ICMP, actions_ICMP)
-                #Luego ya le decimos en el Main_dispatcher al switch que hacer con el paquete que nosotros le mandemos.
+        #TODO: Paquetes ICMP: solamente procesamos los mensajes ICMP que le llegan al switch.
+        # pkt = packet.Packet(msg.data)
+        # eth = pkt.get_protocol(ethernet.ethernet)
+        # if eth.ethertype == ether_types.ETH_TYPE_IP:
+        #     ip = pkt.get_protocol(ipv4.ipv4)
+        #     protocol = ip.proto
+        #     if protocol == in_proto.IPPROTO_ICMP:
+        #         match_ICMP = parser.OFPMatch(eth_type= ether_types.ETH_TYPE_IP)
+        #         actions_ICMP = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
+        #                                         ofproto.OFPCML_NO_BUFFER)]
+        #         self.add_flow(datapath, 5000, match_ICMP, actions_ICMP)
+        #         #Luego ya le decimos en el Main_dispatcher al switch que hacer con el paquete que nosotros le mandemos.
 
         #Paquetes desde h1 a h2:
         match_1 = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_dst=('10.0.1.0', '255.255.255.0'))
@@ -144,6 +144,22 @@ class SimpleRouter(app_manager.RyuApp):
 
         self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
+        if eth.ethertype == ether_types.ETH_TYPE_IP:
+            ip = pkt.get_protocol(ipv4.ipv4)
+            protocol = ip.proto
+            if protocol == in_proto.IPPROTO_ICMP:
+                #No sabemos si la idea es que la primera vez se mande trafico ICMP con destino al propio switch
+                # nos entre como "resto de trafico" y luego al procesarlo si es ICMP, añadamos una regla para que deahi en adelante
+                #el switch sepa que hacer.
+                # match_ICMP = parser.OFPMatch(eth_type= ether_types.ETH_TYPE_IP)
+                # actions_ICMP = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
+                #                                 ofproto.OFPCML_NO_BUFFER)]
+                # self.add_flow(datapath, 5000, match_ICMP, actions_ICMP)
+                self._handle_icmp(datapath=datapath, port= in_port, pkt_original= pkt)
+
+
+
+
 
 
 
@@ -159,9 +175,9 @@ class SimpleRouter(app_manager.RyuApp):
         
         pkt = packet.Packet() #Creamos el paquete vacio.
         pkt.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
-        dst=pkt_ethernet.src,src=self.hw_addr)) #Metemos cabecera ethernet en el paquete.
+        dst=pkt_ethernet.src,src=pkt_ethernet.dst)) #Metemos cabecera ethernet en el paquete.
 
-        pkt.add_protocol(ipv4.ipv4(dst=pkt_ipv4.src,src=self.ip_addr, # tambien pordria ser: pkt_ipv4.dst
+        pkt.add_protocol(ipv4.ipv4(dst=pkt_ipv4.src,src=pkt_ipv4.dst, # tambien pordria ser: pkt_ipv4.dst
         proto=pkt_ipv4.proto))
 
         pkt.add_protocol(icmp.icmp(type_=icmp.ICMP_ECHO_REPLY,code=icmp.ICMP_ECHO_REPLY_CODE,
