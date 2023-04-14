@@ -21,7 +21,6 @@ from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
-from ryu.lib.packet import ipv6
 
 
 
@@ -68,7 +67,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         self.add_flow(datapath, 0, match_0, actions)
 
 
-        
+
 
     def forwardActions(self, parser, ofproto, port, src, dst):
         return [
